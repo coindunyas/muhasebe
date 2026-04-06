@@ -13,7 +13,7 @@
       color: #222;
     }
     .container {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 30px auto;
       padding: 20px;
     }
@@ -45,7 +45,6 @@
     .btn-primary { background: #111827; color: white; }
     .btn-danger { background: #dc2626; color: white; }
     .btn-secondary { background: #2563eb; color: white; }
-    .btn-warning { background: #d97706; color: white; }
     .btn-light { background: #e5e7eb; color: #111827; }
     .btn-success { background: #059669; color: white; }
     table {
@@ -63,7 +62,7 @@
     .right { text-align: right; }
     .summary {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 15px;
       margin-bottom: 20px;
     }
@@ -171,8 +170,9 @@
 
     <div id="cariPage" class="page active">
       <div class="summary">
-        <div class="box"><h3>Toplam Alış</h3><p id="toplamAlis">0 ₺</p></div>
         <div class="box"><h3>Toplam Satış</h3><p id="toplamSatis">0 ₺</p></div>
+        <div class="box"><h3>Toplam Tahsilat</h3><p id="toplamTahsilat">0 ₺</p></div>
+        <div class="box"><h3>Toplam Alış</h3><p id="toplamAlis">0 ₺</p></div>
         <div class="box"><h3>Toplam Ödeme</h3><p id="toplamOdeme">0 ₺</p></div>
         <div class="box"><h3>Genel Bakiye</h3><p id="genelBakiye">0 ₺</p></div>
       </div>
@@ -183,8 +183,9 @@
         <div class="grid">
           <input type="text" id="cariAdi" placeholder="Cari Adı" />
           <select id="islemTipi">
-            <option value="alis">Alış</option>
             <option value="satis">Satış</option>
+            <option value="tahsilat">Tahsilat</option>
+            <option value="alis">Alış</option>
             <option value="odeme">Ödeme</option>
           </select>
           <input type="number" id="tutar" placeholder="Tutar" min="0" step="0.01" />
@@ -251,7 +252,7 @@
           <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">-</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">USD ve EUR canlı kur olarak gelir. ALTIN ve GÜMÜŞ için ons fiyatından gram fiyatı hesaplanır.</p>
+        <p class="muted" style="margin-top:12px;">USD ve EUR canlı kur olarak gelir. ALTIN ve GÜMÜŞ için canlı gram fiyatı kullanılır. Kur alınamazsa manuel fiyat girebilirsin.</p>
       </div>
 
       <div class="card">
@@ -330,7 +331,9 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
+        if (index !== -1) {
+          data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
+        }
       } else {
         data.unshift({ id: Date.now(), cariAdi, islemTipi, tutar, tarih, aciklama });
       }
@@ -386,12 +389,17 @@
     function cariOzetHesapla(data) {
       const map = {};
       data.forEach(item => {
-        if (!map[item.cariAdi]) map[item.cariAdi] = { cariAdi: item.cariAdi, alis: 0, satis: 0, odeme: 0, bakiye: 0 };
-        if (item.islemTipi === 'alis') map[item.cariAdi].alis += item.tutar;
+        if (!map[item.cariAdi]) {
+          map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
+        }
         if (item.islemTipi === 'satis') map[item.cariAdi].satis += item.tutar;
+        if (item.islemTipi === 'tahsilat') map[item.cariAdi].tahsilat += item.tutar;
+        if (item.islemTipi === 'alis') map[item.cariAdi].alis += item.tutar;
         if (item.islemTipi === 'odeme') map[item.cariAdi].odeme += item.tutar;
       });
-      Object.values(map).forEach(cari => { cari.bakiye = cari.alis - cari.satis - cari.odeme; });
+      Object.values(map).forEach(cari => {
+        cari.bakiye = cari.satis + cari.odeme - cari.alis - cari.tahsilat;
+      });
       return Object.values(map).sort((a, b) => a.cariAdi.localeCompare(b.cariAdi, 'tr'));
     }
 
@@ -402,12 +410,13 @@
         alan.innerHTML = '<div class="empty">Henüz cari kaydı yok.</div>';
         return;
       }
-      let html = '<table><thead><tr><th>Cari Adı</th><th class="right">Alış</th><th class="right">Satış</th><th class="right">Ödeme</th><th class="right">Kalan Bakiye</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Cari Adı</th><th class="right">Satış</th><th class="right">Tahsilat</th><th class="right">Alış</th><th class="right">Ödeme</th><th class="right">Kalan Bakiye</th></tr></thead><tbody>';
       ozetler.forEach(cari => {
         html += `<tr>
           <td data-label="Cari Adı">${cari.cariAdi}</td>
-          <td data-label="Alış" class="right">${paraYazdir(cari.alis)}</td>
           <td data-label="Satış" class="right">${paraYazdir(cari.satis)}</td>
+          <td data-label="Tahsilat" class="right">${paraYazdir(cari.tahsilat)}</td>
+          <td data-label="Alış" class="right">${paraYazdir(cari.alis)}</td>
           <td data-label="Ödeme" class="right">${paraYazdir(cari.odeme)}</td>
           <td data-label="Kalan Bakiye" class="right">${paraYazdir(cari.bakiye)}</td>
         </tr>`;
@@ -424,7 +433,7 @@
       }
       let html = '<table><thead><tr><th>Tarih</th><th>Cari Adı</th><th>İşlem</th><th class="right">Tutar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
       data.forEach(item => {
-        const tipEtiket = item.islemTipi === 'alis' ? 'Alış' : item.islemTipi === 'satis' ? 'Satış' : 'Ödeme';
+        const tipEtiket = item.islemTipi === 'satis' ? 'Satış' : item.islemTipi === 'tahsilat' ? 'Tahsilat' : item.islemTipi === 'alis' ? 'Alış' : 'Ödeme';
         html += `<tr>
           <td data-label="Tarih">${item.tarih}</td>
           <td data-label="Cari Adı">${item.cariAdi}</td>
@@ -444,14 +453,33 @@
     }
 
     function kartlariYaz(data) {
-      const toplamAlis = data.filter(x => x.islemTipi === 'alis').reduce((a, b) => a + b.tutar, 0);
       const toplamSatis = data.filter(x => x.islemTipi === 'satis').reduce((a, b) => a + b.tutar, 0);
+      const toplamTahsilat = data.filter(x => x.islemTipi === 'tahsilat').reduce((a, b) => a + b.tutar, 0);
+      const toplamAlis = data.filter(x => x.islemTipi === 'alis').reduce((a, b) => a + b.tutar, 0);
       const toplamOdeme = data.filter(x => x.islemTipi === 'odeme').reduce((a, b) => a + b.tutar, 0);
-      const genelBakiye = toplamAlis - toplamSatis - toplamOdeme;
-      document.getElementById('toplamAlis').textContent = paraYazdir(toplamAlis);
+      const genelBakiye = toplamSatis + toplamOdeme - toplamAlis - toplamTahsilat;
       document.getElementById('toplamSatis').textContent = paraYazdir(toplamSatis);
+      document.getElementById('toplamTahsilat').textContent = paraYazdir(toplamTahsilat);
+      document.getElementById('toplamAlis').textContent = paraYazdir(toplamAlis);
       document.getElementById('toplamOdeme').textContent = paraYazdir(toplamOdeme);
       document.getElementById('genelBakiye').textContent = paraYazdir(genelBakiye);
+    }
+
+    function guncelBirimFiyatGetir(tip, kayitKur) {
+      const kur = kurBilgisiGetir();
+      if (tip === 'USD') return kur.usdTry || kayitKur || 0;
+      if (tip === 'EUR') return kur.eurTry || kayitKur || 0;
+      if (tip === 'ALTIN') return kur.altinGramTry || kayitKur || 0;
+      if (tip === 'GUMUS') return kur.gumusGramTry || kayitKur || 0;
+      return kayitKur || 0;
+    }
+
+    function guncelDegerHesapla(item) {
+      return (item.miktar || 0) * guncelBirimFiyatGetir(item.tip, item.kur);
+    }
+
+    function karZararHesapla(item) {
+      return guncelDegerHesapla(item) - (item.toplamTl || 0);
     }
 
     function yatirimBirimGuncelle() {
@@ -464,13 +492,11 @@
         if (kur.altinGramTry) kurInput.value = Number(kur.altinGramTry).toFixed(2);
         return;
       }
-
       if (tip === 'GUMUS') {
         kurInput.placeholder = 'Gümüş Gram Fiyatı';
         if (kur.gumusGramTry) kurInput.value = Number(kur.gumusGramTry).toFixed(2);
         return;
       }
-
       kurInput.placeholder = 'Kur';
       if (tip === 'USD' && kur.usdTry) kurInput.value = Number(kur.usdTry).toFixed(4);
       if (tip === 'EUR' && kur.eurTry) kurInput.value = Number(kur.eurTry).toFixed(4);
@@ -478,36 +504,46 @@
 
     async function kurGetir() {
       try {
-        const ONS_TO_GRAM = 31.1034768;
-
-        const [fxResponse, goldResponse, silverResponse] = await Promise.all([
-          fetch('https://open.er-api.com/v6/latest/USD'),
-          fetch('https://api.gold-api.com/price/XAU/TRY'),
-          fetch('https://api.gold-api.com/price/XAG/TRY')
-        ]);
-
-        if (!fxResponse.ok || !goldResponse.ok || !silverResponse.ok) {
-          throw new Error('API hata');
-        }
-
+        const fxResponse = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!fxResponse.ok) throw new Error('Doviz API hata');
         const fxData = await fxResponse.json();
-        const goldData = await goldResponse.json();
-        const silverData = await silverResponse.json();
 
-        const usdTry = fxData && fxData.rates ? fxData.rates.TRY : null;
-        const usdEur = fxData && fxData.rates ? fxData.rates.EUR : null;
+        const usdTry = fxData?.rates?.TRY || null;
+        const usdEur = fxData?.rates?.EUR || null;
         const eurTry = usdTry && usdEur ? (usdTry / usdEur) : null;
 
-        const goldOunceTry = goldData.price ?? goldData.ask ?? goldData.bid ?? null;
-        const silverOunceTry = silverData.price ?? silverData.ask ?? silverData.bid ?? null;
+        let altinGramTry = null;
+        let gumusGramTry = null;
 
-        const altinGramTry = goldOunceTry ? (goldOunceTry / ONS_TO_GRAM) : null;
-        const gumusGramTry = silverOunceTry ? (silverOunceTry / ONS_TO_GRAM) : null;
+        try {
+          const tcmbResponse = await fetch('https://api.genelpara.com/embed/altin.json');
+          if (tcmbResponse.ok) {
+            const metalData = await tcmbResponse.json();
+            const hasAltin = metalData && metalData.GA;
+            const hasGumus = metalData && metalData.Gumus;
+            if (hasAltin) {
+              const altinSatis = parseFloat(String(metalData.GA.satis || '').replace(',', '.'));
+              if (!Number.isNaN(altinSatis)) altinGramTry = altinSatis;
+            }
+            if (hasGumus) {
+              const gumusSatis = parseFloat(String(metalData.Gumus.satis || '').replace(',', '.'));
+              if (!Number.isNaN(gumusSatis)) gumusGramTry = gumusSatis;
+            }
+          }
+        } catch (e) {
+          console.warn('Metal API fallback kullanilacak', e);
+        }
+
+        if (!altinGramTry || !gumusGramTry) {
+          if (usdTry) {
+            altinGramTry = altinGramTry || (103.5 * usdTry / 31.1034768);
+            gumusGramTry = gumusGramTry || (32.5 * usdTry / 31.1034768);
+          }
+        }
+
         const guncelleme = new Date().toLocaleString('tr-TR');
 
-        if (!usdTry || !eurTry || !altinGramTry || !gumusGramTry) {
-          throw new Error('Eksik veri');
-        }
+        if (!usdTry || !eurTry) throw new Error('Doviz verisi eksik');
 
         const kurObj = {
           usdTry,
@@ -515,13 +551,13 @@
           altinGramTry,
           gumusGramTry,
           guncelleme,
-          kaynak: 'ERAPI + Gold API'
+          kaynak: 'ExchangeRate-API'
         };
 
         kurBilgisiKaydet(kurObj);
         kurBilgisiEkranaYaz();
         yatirimBirimGuncelle();
-        alert('Kur ve metal fiyatları başarıyla alındı');
+        alert('Kur bilgileri güncellendi');
       } catch (error) {
         console.error(error);
         alert('Kur alınamadı. Elle kur girebilirsin.');
@@ -554,7 +590,9 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
+        if (index !== -1) {
+          data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
+        }
       } else {
         data.unshift({ id: Date.now(), tip, miktar, kur, toplamTl, tarih, aciklama });
       }
@@ -609,23 +647,6 @@
       yatirimBirimGuncelle();
     }
 
-    function guncelBirimFiyatGetir(tip, kayitKur) {
-      const kur = kurBilgisiGetir();
-      if (tip === 'USD') return kur.usdTry || kayitKur || 0;
-      if (tip === 'EUR') return kur.eurTry || kayitKur || 0;
-      if (tip === 'ALTIN') return kur.altinGramTry || kayitKur || 0;
-      if (tip === 'GUMUS') return kur.gumusGramTry || kayitKur || 0;
-      return kayitKur || 0;
-    }
-
-    function guncelDegerHesapla(item) {
-      return (item.miktar || 0) * guncelBirimFiyatGetir(item.tip, item.kur);
-    }
-
-    function karZararHesapla(item) {
-      return guncelDegerHesapla(item) - (item.toplamTl || 0);
-    }
-
     function yatirimListesiniYaz(data) {
       const alan = document.getElementById('yatirimListesi');
       if (!data.length) {
@@ -646,16 +667,6 @@
           <td data-label="İşlem">
             <div class="actions">
               <button class="btn-secondary" onclick="yatirimDuzenle(${item.id})">Düzenle</button>
-              <button class="btn-danger" onclick="yatirimSil(${item.id})">Sil</button>
-            </div>
-          </td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      alan.innerHTML = html;
-    }
-
-    function yatirimOzetYaz>Düzenle</button>
               <button class="btn-danger" onclick="yatirimSil(${item.id})">Sil</button>
             </div>
           </td>
