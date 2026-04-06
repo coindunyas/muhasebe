@@ -217,6 +217,7 @@
         <div class="box"><h3>USD Toplamı</h3><p id="toplamUsd">0</p></div>
         <div class="box"><h3>EUR Toplamı</h3><p id="toplamEur">0</p></div>
         <div class="box"><h3>ALTIN / Gram</h3><p id="toplamAltin">0</p></div>
+        <div class="box"><h3>GÜMÜŞ / Gram</h3><p id="toplamGumus">0</p></div>
       </div>
 
       <div class="card">
@@ -227,6 +228,7 @@
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
             <option value="ALTIN">ALTIN</option>
+            <option value="GUMUS">GÜMÜŞ</option>
           </select>
           <input type="number" id="miktar" placeholder="Miktar" min="0" step="0.0001" />
           <input type="number" id="kur" placeholder="Kur / Birim Fiyat" min="0" step="0.0001" />
@@ -244,9 +246,11 @@
         <div class="info-bar">
           <div class="info-pill">USD/TRY: <strong id="usdKurBilgi">-</strong></div>
           <div class="info-pill">EUR/TRY: <strong id="eurKurBilgi">-</strong></div>
+          <div class="info-pill">ALTIN/gr: <strong id="altinKurBilgi">-</strong></div>
+          <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">-</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">USD ve EUR için canlı kur çekilir. ALTIN için fiyat manuel girilir.</p>
+        <p class="muted" style="margin-top:12px;">USD ve EUR canlı kur olarak gelir. ALTIN ve GÜMÜŞ için ons fiyatından gram fiyatı hesaplanır.</p>
       </div>
 
       <div class="card">
@@ -452,34 +456,71 @@
     function yatirimBirimGuncelle() {
       const tip = document.getElementById('yatirimTipi').value;
       const kurInput = document.getElementById('kur');
+      const kur = kurBilgisiGetir();
+
       if (tip === 'ALTIN') {
-        kurInput.placeholder = 'Gram Fiyatı';
+        kurInput.placeholder = 'Altın Gram Fiyatı';
+        if (kur.altinGramTry) kurInput.value = Number(kur.altinGramTry).toFixed(2);
         return;
       }
+
+      if (tip === 'GUMUS') {
+        kurInput.placeholder = 'Gümüş Gram Fiyatı';
+        if (kur.gumusGramTry) kurInput.value = Number(kur.gumusGramTry).toFixed(2);
+        return;
+      }
+
       kurInput.placeholder = 'Kur';
-      const kur = kurBilgisiGetir();
-      if (tip === 'USD' && kur.usdTry) kurInput.value = kur.usdTry;
-      if (tip === 'EUR' && kur.eurTry) kurInput.value = kur.eurTry;
+      if (tip === 'USD' && kur.usdTry) kurInput.value = Number(kur.usdTry).toFixed(4);
+      if (tip === 'EUR' && kur.eurTry) kurInput.value = Number(kur.eurTry).toFixed(4);
     }
 
     async function kurGetir() {
       try {
-        const response = await fetch('https://open.er-api.com/v6/latest/USD');
-        if (!response.ok) throw new Error('API hata');
+        const ONS_TO_GRAM = 31.1034768;
 
-        const data = await response.json();
-        const usdTry = data && data.rates ? data.rates.TRY : null;
-        const usdEur = data && data.rates ? data.rates.EUR : null;
+        const [fxResponse, goldResponse, silverResponse] = await Promise.all([
+          fetch('https://open.er-api.com/v6/latest/USD'),
+          fetch('https://api.gold-api.com/price/XAU/TRY'),
+          fetch('https://api.gold-api.com/price/XAG/TRY')
+        ]);
+
+        if (!fxResponse.ok || !goldResponse.ok || !silverResponse.ok) {
+          throw new Error('API hata');
+        }
+
+        const fxData = await fxResponse.json();
+        const goldData = await goldResponse.json();
+        const silverData = await silverResponse.json();
+
+        const usdTry = fxData && fxData.rates ? fxData.rates.TRY : null;
+        const usdEur = fxData && fxData.rates ? fxData.rates.EUR : null;
         const eurTry = usdTry && usdEur ? (usdTry / usdEur) : null;
+
+        const goldOunceTry = goldData.price ?? goldData.ask ?? goldData.bid ?? null;
+        const silverOunceTry = silverData.price ?? silverData.ask ?? silverData.bid ?? null;
+
+        const altinGramTry = goldOunceTry ? (goldOunceTry / ONS_TO_GRAM) : null;
+        const gumusGramTry = silverOunceTry ? (silverOunceTry / ONS_TO_GRAM) : null;
         const guncelleme = new Date().toLocaleString('tr-TR');
 
-        if (!usdTry) throw new Error('Kur yok');
+        if (!usdTry || !eurTry || !altinGramTry || !gumusGramTry) {
+          throw new Error('Eksik veri');
+        }
 
-        const kurObj = { usdTry, eurTry, guncelleme, kaynak: 'ERAPI' };
+        const kurObj = {
+          usdTry,
+          eurTry,
+          altinGramTry,
+          gumusGramTry,
+          guncelleme,
+          kaynak: 'ERAPI + Gold API'
+        };
+
         kurBilgisiKaydet(kurObj);
         kurBilgisiEkranaYaz();
         yatirimBirimGuncelle();
-        alert('Kur başarıyla alındı');
+        alert('Kur ve metal fiyatları başarıyla alındı');
       } catch (error) {
         console.error(error);
         alert('Kur alınamadı. Elle kur girebilirsin.');
@@ -490,6 +531,8 @@
       const kur = kurBilgisiGetir();
       document.getElementById('usdKurBilgi').textContent = kur.usdTry ? sayiYazdir(kur.usdTry) : '-';
       document.getElementById('eurKurBilgi').textContent = kur.eurTry ? sayiYazdir(kur.eurTry) : '-';
+      document.getElementById('altinKurBilgi').textContent = kur.altinGramTry ? paraYazdir(kur.altinGramTry) : '-';
+      document.getElementById('gumusKurBilgi').textContent = kur.gumusGramTry ? paraYazdir(kur.gumusGramTry) : '-';
       document.getElementById('kurGuncellemeBilgi').textContent = kur.guncelleme || '-';
     }
 
@@ -597,10 +640,12 @@
       const toplamUsd = data.filter(x => x.tip === 'USD').reduce((sum, x) => sum + x.miktar, 0);
       const toplamEur = data.filter(x => x.tip === 'EUR').reduce((sum, x) => sum + x.miktar, 0);
       const toplamAltin = data.filter(x => x.tip === 'ALTIN').reduce((sum, x) => sum + x.miktar, 0);
+      const toplamGumus = data.filter(x => x.tip === 'GUMUS').reduce((sum, x) => sum + x.miktar, 0);
       document.getElementById('toplamYatirimTl').textContent = paraYazdir(toplamTl);
       document.getElementById('toplamUsd').textContent = sayiYazdir(toplamUsd);
       document.getElementById('toplamEur').textContent = sayiYazdir(toplamEur);
       document.getElementById('toplamAltin').textContent = sayiYazdir(toplamAltin);
+      document.getElementById('toplamGumus').textContent = sayiYazdir(toplamGumus);
     }
 
     function ekraniYenile() {
