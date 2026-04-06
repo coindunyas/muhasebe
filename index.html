@@ -464,41 +464,25 @@
 
     async function kurGetir() {
       try {
-        const response = await fetch('https://api.frankfurter.app/latest?from=USD&to=TRY,EUR');
-
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
         if (!response.ok) throw new Error('API hata');
 
         const data = await response.json();
-
-        const usdTry = data?.rates?.TRY;
-        const eurTry = data?.rates?.EUR ? (usdTry / data.rates.EUR) : null;
+        const usdTry = data && data.rates ? data.rates.TRY : null;
+        const usdEur = data && data.rates ? data.rates.EUR : null;
+        const eurTry = usdTry && usdEur ? (usdTry / usdEur) : null;
         const guncelleme = new Date().toLocaleString('tr-TR');
 
         if (!usdTry) throw new Error('Kur yok');
 
-        const kurObj = {
-          usdTry: usdTry,
-          eurTry: eurTry,
-          guncelleme,
-          kaynak: 'Frankfurter'
-        };
-
+        const kurObj = { usdTry, eurTry, guncelleme, kaynak: 'ERAPI' };
         kurBilgisiKaydet(kurObj);
         kurBilgisiEkranaYaz();
         yatirimBirimGuncelle();
-
         alert('Kur başarıyla alındı');
       } catch (error) {
         console.error(error);
-        alert('Kur alınamadı. Tarayıcı veya bağlantı engelliyor olabilir.');
-      }
-    };
-        kurBilgisiKaydet(kurObj);
-        kurBilgisiEkranaYaz();
-        yatirimBirimGuncelle();
-        alert('Canlı kurlar başarıyla çekildi.');
-      } catch (error) {
-        alert('Kur alınamadı. İnternet bağlantısını veya API erişimini kontrol edin.');
+        alert('Kur alınamadı. Elle kur girebilirsin.');
       }
     }
 
