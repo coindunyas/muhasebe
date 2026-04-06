@@ -137,6 +137,9 @@
       padding: 8px 12px;
       border-radius: 999px;
     }
+    .pl-positive { color: #059669; font-weight: 700; }
+    .pl-negative { color: #dc2626; font-weight: 700; }
+    .pl-zero { color: #6b7280; font-weight: 700; }
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
       thead { display: none; }
@@ -252,7 +255,7 @@
           <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">-</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">USD ve EUR canlı kur olarak gelir. ALTIN ve GÜMÜŞ için canlı gram fiyatı kullanılır. Kur alınamazsa manuel fiyat girebilirsin.</p>
+        <p class="muted" style="margin-top:12px;">Döviz için açık erişimli ExchangeRate-API, altın ve gümüş için GenelPara altın verisi kullanılır. Kur alınamazsa manuel fiyat girebilirsin.</p>
       </div>
 
       <div class="card">
@@ -276,6 +279,12 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: basamak
       });
+    }
+
+    function plClass(tutar) {
+      if (tutar > 0) return 'pl-positive';
+      if (tutar < 0) return 'pl-negative';
+      return 'pl-zero';
     }
 
     function sayfaGoster(pageId, btn) {
@@ -331,9 +340,7 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) {
-          data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
-        }
+        if (index !== -1) data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
       } else {
         data.unshift({ id: Date.now(), cariAdi, islemTipi, tutar, tarih, aciklama });
       }
@@ -389,9 +396,7 @@
     function cariOzetHesapla(data) {
       const map = {};
       data.forEach(item => {
-        if (!map[item.cariAdi]) {
-          map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
-        }
+        if (!map[item.cariAdi]) map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
         if (item.islemTipi === 'satis') map[item.cariAdi].satis += item.tutar;
         if (item.islemTipi === 'tahsilat') map[item.cariAdi].tahsilat += item.tutar;
         if (item.islemTipi === 'alis') map[item.cariAdi].alis += item.tutar;
@@ -512,38 +517,16 @@
         const usdEur = fxData?.rates?.EUR || null;
         const eurTry = usdTry && usdEur ? (usdTry / usdEur) : null;
 
-        let altinGramTry = null;
-        let gumusGramTry = null;
+        const metalResponse = await fetch('https://api.genelpara.com/embed/altin.json');
+        if (!metalResponse.ok) throw new Error('Metal API hata');
+        const metalData = await metalResponse.json();
 
-        try {
-          const tcmbResponse = await fetch('https://api.genelpara.com/embed/altin.json');
-          if (tcmbResponse.ok) {
-            const metalData = await tcmbResponse.json();
-            const hasAltin = metalData && metalData.GA;
-            const hasGumus = metalData && metalData.Gumus;
-            if (hasAltin) {
-              const altinSatis = parseFloat(String(metalData.GA.satis || '').replace(',', '.'));
-              if (!Number.isNaN(altinSatis)) altinGramTry = altinSatis;
-            }
-            if (hasGumus) {
-              const gumusSatis = parseFloat(String(metalData.Gumus.satis || '').replace(',', '.'));
-              if (!Number.isNaN(gumusSatis)) gumusGramTry = gumusSatis;
-            }
-          }
-        } catch (e) {
-          console.warn('Metal API fallback kullanilacak', e);
-        }
-
-        if (!altinGramTry || !gumusGramTry) {
-          if (usdTry) {
-            altinGramTry = altinGramTry || (103.5 * usdTry / 31.1034768);
-            gumusGramTry = gumusGramTry || (32.5 * usdTry / 31.1034768);
-          }
-        }
+        const altinGramTry = parseFloat(String(metalData?.GA?.satis || '').replace(',', '.')) || null;
+        const gumusGramTry = parseFloat(String(metalData?.Gumus?.satis || '').replace(',', '.')) || null;
 
         const guncelleme = new Date().toLocaleString('tr-TR');
 
-        if (!usdTry || !eurTry) throw new Error('Doviz verisi eksik');
+        if (!usdTry || !eurTry || !altinGramTry || !gumusGramTry) throw new Error('Veri eksik');
 
         const kurObj = {
           usdTry,
@@ -551,7 +534,7 @@
           altinGramTry,
           gumusGramTry,
           guncelleme,
-          kaynak: 'ExchangeRate-API'
+          kaynak: 'ExchangeRate-API + GenelPara'
         };
 
         kurBilgisiKaydet(kurObj);
@@ -590,9 +573,7 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) {
-          data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
-        }
+        if (index !== -1) data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
       } else {
         data.unshift({ id: Date.now(), tip, miktar, kur, toplamTl, tarih, aciklama });
       }
@@ -655,6 +636,7 @@
       }
       let html = '<table><thead><tr><th>Tarih</th><th>Tür</th><th class="right">Miktar</th><th class="right">Kur / Fiyat</th><th class="right">Toplam TL</th><th class="right">Güncel Değer</th><th class="right">Kar / Zarar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
       data.forEach(item => {
+        const pl = karZararHesapla(item);
         html += `<tr>
           <td data-label="Tarih">${item.tarih}</td>
           <td data-label="Tür"><span class="tag">${item.tip}</span></td>
@@ -662,7 +644,7 @@
           <td data-label="Kur / Fiyat" class="right">${sayiYazdir(item.kur)}</td>
           <td data-label="Toplam TL" class="right">${paraYazdir(item.toplamTl)}</td>
           <td data-label="Güncel Değer" class="right">${paraYazdir(guncelDegerHesapla(item))}</td>
-          <td data-label="Kar / Zarar" class="right">${paraYazdir(karZararHesapla(item))}</td>
+          <td data-label="Kar / Zarar" class="right ${plClass(pl)}">${paraYazdir(pl)}</td>
           <td data-label="Açıklama">${item.aciklama || '-'}</td>
           <td data-label="İşlem">
             <div class="actions">
@@ -683,12 +665,14 @@
       const toplamAltin = data.filter(x => x.tip === 'ALTIN').reduce((sum, x) => sum + x.miktar, 0);
       const toplamGumus = data.filter(x => x.tip === 'GUMUS').reduce((sum, x) => sum + x.miktar, 0);
       const toplamKarZarar = data.reduce((sum, x) => sum + karZararHesapla(x), 0);
+      const kzEl = document.getElementById('guncelKarZarar');
       document.getElementById('toplamYatirimTl').textContent = paraYazdir(toplamTl);
       document.getElementById('toplamUsd').textContent = sayiYazdir(toplamUsd);
       document.getElementById('toplamEur').textContent = sayiYazdir(toplamEur);
       document.getElementById('toplamAltin').textContent = sayiYazdir(toplamAltin);
       document.getElementById('toplamGumus').textContent = sayiYazdir(toplamGumus);
-      document.getElementById('guncelKarZarar').textContent = paraYazdir(toplamKarZarar);
+      kzEl.textContent = paraYazdir(toplamKarZarar);
+      kzEl.className = plClass(toplamKarZarar);
     }
 
     function ekraniYenile() {
