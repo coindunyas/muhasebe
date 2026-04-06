@@ -181,6 +181,18 @@
       </div>
 
       <div class="card">
+        <h2>Piyasa Fiyatı</h2>
+        <div class="grid">
+          <input type="number" id="manuelAltinFiyati" placeholder="Altın gram fiyatı" min="0" step="0.01" />
+          <input type="number" id="manuelGumusFiyati" placeholder="Gümüş gram fiyatı" min="0" step="0.01" />
+        </div>
+        <div class="actions" style="margin-top:12px;">
+          <button class="btn-secondary" onclick="manuelMetalFiyatlariniKaydet()">Fiyatları Kaydet</button>
+        </div>
+        <p class="muted" style="margin-top:12px;">Altın ve gümüşte en güvenli yöntem buraya güncel gram fiyatını yazmaktır. Sonra yatırım eklerken ALTIN veya GÜMÜŞ seçince kur alanına otomatik gelir.</p>
+      </div>
+
+      <div class="card">
         <h2 id="yatirimFormBaslik">Yatırım Ekle</h2>
         <input type="hidden" id="yatirimEditId" />
         <div class="grid">
@@ -201,6 +213,7 @@
           <button class="btn-primary" onclick="yatirimKaydet()" id="yatirimKaydetBtn">Kaydet</button>
           <button class="btn-light" onclick="yatirimDuzenlemeIptal()" id="yatirimIptalBtn" style="display:none;">İptal</button>
           <button class="btn-success" onclick="kurGetir(true)">Döviz Kurunu Güncelle</button>
+          <button class="btn-secondary" onclick="uygulaSeciliTure()">Fiyatı Uygula</button>
           <button class="btn-danger" onclick="tumYatirimVerileriniSil()">Tüm Yatırım Verileri Sil</button>
         </div>
         <div class="info-bar">
@@ -210,7 +223,7 @@
           <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">manuel</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">USD/EUR otomatik gelir. Altın ve gümüş için en güvenlisi manuel gram fiyatı girmektir. GitHub Pages tarafında tarayıcı erişimi bazı metal API’lerinde engellenebilir. :contentReference[oaicite:1]{index=1}</p>
+        <p class="muted" style="margin-top:12px;">USD/EUR otomatik gelir. ALTIN/GÜMÜŞ seçince kur alanı manuel gram fiyatı için hazırlanır.</p>
       </div>
 
       <div class="card">
@@ -446,6 +459,8 @@
       const kur = kurBilgisiGetir();
       if (tip === 'USD') return kur.usdTry || kayitKur || 0;
       if (tip === 'EUR') return kur.eurTry || kayitKur || 0;
+      if (tip === 'ALTIN') return kur.altinGramTry || kayitKur || 0;
+      if (tip === 'GUMUS') return kur.gumusGramTry || kayitKur || 0;
       return kayitKur || 0;
     }
 
@@ -457,21 +472,63 @@
       return guncelDegerHesapla(item) - (item.toplamTl || 0);
     }
 
-    function yatirimBirimGuncelle() {
+    function manuelMetalFiyatlariniKaydet() {
+      const altin = parseFloat(document.getElementById('manuelAltinFiyati').value);
+      const gumus = parseFloat(document.getElementById('manuelGumusFiyati').value);
+
+      const kur = kurBilgisiGetir();
+      if (altin && altin > 0) kur.altinGramTry = altin;
+      if (gumus && gumus > 0) kur.gumusGramTry = gumus;
+      kur.guncelleme = new Date().toLocaleString('tr-TR');
+
+      kurBilgisiKaydet(kur);
+      kurBilgisiEkranaYaz();
+      yatirimBirimGuncelle();
+      ekraniYenile();
+      alert('Metal fiyatları kaydedildi');
+    }
+
+    function uygulaSeciliTure() {
       const tip = document.getElementById('yatirimTipi').value;
       const kurInput = document.getElementById('kur');
       const kur = kurBilgisiGetir();
 
+      if (tip === 'ALTIN' && kur.altinGramTry) {
+        kurInput.value = Number(kur.altinGramTry).toFixed(2);
+        return;
+      }
+      if (tip === 'GUMUS' && kur.gumusGramTry) {
+        kurInput.value = Number(kur.gumusGramTry).toFixed(2);
+        return;
+      }
+      if (tip === 'USD' && kur.usdTry) {
+        kurInput.value = Number(kur.usdTry).toFixed(4);
+        return;
+      }
+      if (tip === 'EUR' && kur.eurTry) {
+        kurInput.value = Number(kur.eurTry).toFixed(4);
+        return;
+      }
+      alert('Önce ilgili fiyatı gir veya güncelle');
+    }
+
+    function yatirimBirimGuncelle() {
+      const tip = document.getElementById('yatirimTipi').value;
+      const kurInput = document.getElementById('kur');
+
       if (tip === 'ALTIN') {
         kurInput.placeholder = 'Altın Gram Fiyatı';
+        kurInput.value = '';
         return;
       }
       if (tip === 'GUMUS') {
         kurInput.placeholder = 'Gümüş Gram Fiyatı';
+        kurInput.value = '';
         return;
       }
 
       kurInput.placeholder = 'Kur';
+      const kur = kurBilgisiGetir();
       if (tip === 'USD' && kur.usdTry) kurInput.value = Number(kur.usdTry).toFixed(4);
       if (tip === 'EUR' && kur.eurTry) kurInput.value = Number(kur.eurTry).toFixed(4);
     }
@@ -505,9 +562,12 @@
       const kur = kurBilgisiGetir();
       document.getElementById('usdKurBilgi').textContent = kur.usdTry ? sayiYazdir(kur.usdTry) : '-';
       document.getElementById('eurKurBilgi').textContent = kur.eurTry ? sayiYazdir(kur.eurTry) : '-';
-      document.getElementById('altinKurBilgi').textContent = 'manuel';
-      document.getElementById('gumusKurBilgi').textContent = 'manuel';
+      document.getElementById('altinKurBilgi').textContent = kur.altinGramTry ? paraYazdir(kur.altinGramTry) : 'manuel';
+      document.getElementById('gumusKurBilgi').textContent = kur.gumusGramTry ? paraYazdir(kur.gumusGramTry) : 'manuel';
       document.getElementById('kurGuncellemeBilgi').textContent = kur.guncelleme || '-';
+
+      if (kur.altinGramTry) document.getElementById('manuelAltinFiyati').value = kur.altinGramTry;
+      if (kur.gumusGramTry) document.getElementById('manuelGumusFiyati').value = kur.gumusGramTry;
     }
 
     function yatirimKaydet() {
