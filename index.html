@@ -47,6 +47,7 @@
     .btn-secondary { background: #2563eb; color: white; }
     .btn-light { background: #e5e7eb; color: #111827; }
     .btn-success { background: #059669; color: white; }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -60,6 +61,7 @@
     }
     th { background: #f9fafb; }
     .right { text-align: right; }
+
     .summary {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -82,13 +84,16 @@
       font-size: 24px;
       font-weight: bold;
     }
+
     .muted { color: #6b7280; font-size: 13px; }
+
     .actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
     }
     .actions button { width: auto; }
+
     .empty {
       padding: 18px;
       text-align: center;
@@ -97,6 +102,7 @@
       border-radius: 12px;
       margin-top: 10px;
     }
+
     .tabs {
       display: flex;
       gap: 10px;
@@ -113,8 +119,10 @@
       background: #111827;
       color: #fff;
     }
+
     .page { display: none; }
     .page.active { display: block; }
+
     .tag {
       display: inline-block;
       padding: 4px 8px;
@@ -124,6 +132,7 @@
       background: #eef2ff;
       color: #3730a3;
     }
+
     .info-bar {
       display: flex;
       gap: 10px;
@@ -137,9 +146,30 @@
       padding: 8px 12px;
       border-radius: 999px;
     }
+
     .pl-positive { color: #059669; font-weight: 700; }
     .pl-negative { color: #dc2626; font-weight: 700; }
     .pl-zero { color: #6b7280; font-weight: 700; }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .chart-box {
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .chart-title {
+      padding: 14px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: bold;
+      background: #fafafa;
+    }
+
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
       thead { display: none; }
@@ -255,12 +285,28 @@
           <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">-</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">Döviz için açık erişimli ExchangeRate-API, altın ve gümüş için GenelPara altın verisi kullanılır. Kur alınamazsa manuel fiyat girebilirsin.</p>
+        <p class="muted" style="margin-top:12px;">Sayfa açılınca kur otomatik güncellenir. Kur alınamazsa manuel fiyat girebilirsin.</p>
       </div>
 
       <div class="card">
         <h2>Yatırım Listesi</h2>
         <div id="yatirimListesi"></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-title">Altın Grafiği</div>
+          <div class="tradingview-widget-container">
+            <div id="tv_gold"></div>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <div class="chart-title">Gümüş Grafiği</div>
+          <div class="tradingview-widget-container">
+            <div id="tv_silver"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -271,7 +317,10 @@
     const KUR_STORAGE_KEY = 'basitYatirimKurData';
 
     function paraYazdir(tutar) {
-      return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(tutar || 0);
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY'
+      }).format(tutar || 0);
     }
 
     function sayiYazdir(sayi, basamak = 4) {
@@ -340,9 +389,18 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
+        if (index !== -1) {
+          data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
+        }
       } else {
-        data.unshift({ id: Date.now(), cariAdi, islemTipi, tutar, tarih, aciklama });
+        data.unshift({
+          id: Date.now(),
+          cariAdi,
+          islemTipi,
+          tutar,
+          tarih,
+          aciklama
+        });
       }
 
       cariVerileriKaydet(data);
@@ -353,6 +411,7 @@
     function hareketDuzenle(id) {
       const item = cariVerileriGetir().find(x => x.id === id);
       if (!item) return;
+
       document.getElementById('editId').value = item.id;
       document.getElementById('cariAdi').value = item.cariAdi;
       document.getElementById('islemTipi').value = item.islemTipi;
@@ -395,27 +454,43 @@
 
     function cariOzetHesapla(data) {
       const map = {};
+
       data.forEach(item => {
-        if (!map[item.cariAdi]) map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
+        if (!map[item.cariAdi]) {
+          map[item.cariAdi] = {
+            cariAdi: item.cariAdi,
+            satis: 0,
+            tahsilat: 0,
+            alis: 0,
+            odeme: 0,
+            bakiye: 0
+          };
+        }
+
         if (item.islemTipi === 'satis') map[item.cariAdi].satis += item.tutar;
         if (item.islemTipi === 'tahsilat') map[item.cariAdi].tahsilat += item.tutar;
         if (item.islemTipi === 'alis') map[item.cariAdi].alis += item.tutar;
         if (item.islemTipi === 'odeme') map[item.cariAdi].odeme += item.tutar;
       });
+
       Object.values(map).forEach(cari => {
         cari.bakiye = cari.satis + cari.odeme - cari.alis - cari.tahsilat;
       });
+
       return Object.values(map).sort((a, b) => a.cariAdi.localeCompare(b.cariAdi, 'tr'));
     }
 
     function ozetAlaniniYaz(data) {
       const ozetler = cariOzetHesapla(data);
       const alan = document.getElementById('cariOzetAlani');
+
       if (!ozetler.length) {
         alan.innerHTML = '<div class="empty">Henüz cari kaydı yok.</div>';
         return;
       }
+
       let html = '<table><thead><tr><th>Cari Adı</th><th class="right">Satış</th><th class="right">Tahsilat</th><th class="right">Alış</th><th class="right">Ödeme</th><th class="right">Kalan Bakiye</th></tr></thead><tbody>';
+
       ozetler.forEach(cari => {
         html += `<tr>
           <td data-label="Cari Adı">${cari.cariAdi}</td>
@@ -426,19 +501,28 @@
           <td data-label="Kalan Bakiye" class="right">${paraYazdir(cari.bakiye)}</td>
         </tr>`;
       });
+
       html += '</tbody></table>';
       alan.innerHTML = html;
     }
 
     function hareketListesiniYaz(data) {
       const alan = document.getElementById('hareketListesi');
+
       if (!data.length) {
         alan.innerHTML = '<div class="empty">Henüz hareket yok.</div>';
         return;
       }
+
       let html = '<table><thead><tr><th>Tarih</th><th>Cari Adı</th><th>İşlem</th><th class="right">Tutar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
+
       data.forEach(item => {
-        const tipEtiket = item.islemTipi === 'satis' ? 'Satış' : item.islemTipi === 'tahsilat' ? 'Tahsilat' : item.islemTipi === 'alis' ? 'Alış' : 'Ödeme';
+        const tipEtiket =
+          item.islemTipi === 'satis' ? 'Satış' :
+          item.islemTipi === 'tahsilat' ? 'Tahsilat' :
+          item.islemTipi === 'alis' ? 'Alış' :
+          'Ödeme';
+
         html += `<tr>
           <td data-label="Tarih">${item.tarih}</td>
           <td data-label="Cari Adı">${item.cariAdi}</td>
@@ -453,6 +537,7 @@
           </td>
         </tr>`;
       });
+
       html += '</tbody></table>';
       alan.innerHTML = html;
     }
@@ -463,6 +548,7 @@
       const toplamAlis = data.filter(x => x.islemTipi === 'alis').reduce((a, b) => a + b.tutar, 0);
       const toplamOdeme = data.filter(x => x.islemTipi === 'odeme').reduce((a, b) => a + b.tutar, 0);
       const genelBakiye = toplamSatis + toplamOdeme - toplamAlis - toplamTahsilat;
+
       document.getElementById('toplamSatis').textContent = paraYazdir(toplamSatis);
       document.getElementById('toplamTahsilat').textContent = paraYazdir(toplamTahsilat);
       document.getElementById('toplamAlis').textContent = paraYazdir(toplamAlis);
@@ -497,17 +583,19 @@
         if (kur.altinGramTry) kurInput.value = Number(kur.altinGramTry).toFixed(2);
         return;
       }
+
       if (tip === 'GUMUS') {
         kurInput.placeholder = 'Gümüş Gram Fiyatı';
         if (kur.gumusGramTry) kurInput.value = Number(kur.gumusGramTry).toFixed(2);
         return;
       }
+
       kurInput.placeholder = 'Kur';
       if (tip === 'USD' && kur.usdTry) kurInput.value = Number(kur.usdTry).toFixed(4);
       if (tip === 'EUR' && kur.eurTry) kurInput.value = Number(kur.eurTry).toFixed(4);
     }
 
-    async function kurGetir() {
+    async function kurGetir(showAlert = true) {
       try {
         const fxResponse = await fetch('https://open.er-api.com/v6/latest/USD');
         if (!fxResponse.ok) throw new Error('Doviz API hata');
@@ -526,7 +614,9 @@
 
         const guncelleme = new Date().toLocaleString('tr-TR');
 
-        if (!usdTry || !eurTry || !altinGramTry || !gumusGramTry) throw new Error('Veri eksik');
+        if (!usdTry || !eurTry || !altinGramTry || !gumusGramTry) {
+          throw new Error('Veri eksik');
+        }
 
         const kurObj = {
           usdTry,
@@ -540,10 +630,12 @@
         kurBilgisiKaydet(kurObj);
         kurBilgisiEkranaYaz();
         yatirimBirimGuncelle();
-        alert('Kur bilgileri güncellendi');
+        ekraniYenile();
+
+        if (showAlert) alert('Kur bilgileri güncellendi');
       } catch (error) {
         console.error(error);
-        alert('Kur alınamadı. Elle kur girebilirsin.');
+        if (showAlert) alert('Kur alınamadı. Elle kur girebilirsin.');
       }
     }
 
@@ -573,9 +665,19 @@
 
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
+        if (index !== -1) {
+          data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
+        }
       } else {
-        data.unshift({ id: Date.now(), tip, miktar, kur, toplamTl, tarih, aciklama });
+        data.unshift({
+          id: Date.now(),
+          tip,
+          miktar,
+          kur,
+          toplamTl,
+          tarih,
+          aciklama
+        });
       }
 
       yatirimVerileriKaydet(data);
@@ -586,6 +688,7 @@
     function yatirimDuzenle(id) {
       const item = yatirimVerileriGetir().find(x => x.id === id);
       if (!item) return;
+
       document.getElementById('yatirimEditId').value = item.id;
       document.getElementById('yatirimTipi').value = item.tip;
       document.getElementById('miktar').value = item.miktar;
@@ -595,6 +698,7 @@
       document.getElementById('yatirimFormBaslik').textContent = 'Yatırım Düzenle';
       document.getElementById('yatirimKaydetBtn').textContent = 'Güncelle';
       document.getElementById('yatirimIptalBtn').style.display = 'inline-block';
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -630,11 +734,14 @@
 
     function yatirimListesiniYaz(data) {
       const alan = document.getElementById('yatirimListesi');
+
       if (!data.length) {
         alan.innerHTML = '<div class="empty">Henüz yatırım kaydı yok.</div>';
         return;
       }
+
       let html = '<table><thead><tr><th>Tarih</th><th>Tür</th><th class="right">Miktar</th><th class="right">Kur / Fiyat</th><th class="right">Toplam TL</th><th class="right">Güncel Değer</th><th class="right">Kar / Zarar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
+
       data.forEach(item => {
         const pl = karZararHesapla(item);
         html += `<tr>
@@ -654,6 +761,7 @@
           </td>
         </tr>`;
       });
+
       html += '</tbody></table>';
       alan.innerHTML = html;
     }
@@ -665,12 +773,14 @@
       const toplamAltin = data.filter(x => x.tip === 'ALTIN').reduce((sum, x) => sum + x.miktar, 0);
       const toplamGumus = data.filter(x => x.tip === 'GUMUS').reduce((sum, x) => sum + x.miktar, 0);
       const toplamKarZarar = data.reduce((sum, x) => sum + karZararHesapla(x), 0);
-      const kzEl = document.getElementById('guncelKarZarar');
+
       document.getElementById('toplamYatirimTl').textContent = paraYazdir(toplamTl);
       document.getElementById('toplamUsd').textContent = sayiYazdir(toplamUsd);
       document.getElementById('toplamEur').textContent = sayiYazdir(toplamEur);
       document.getElementById('toplamAltin').textContent = sayiYazdir(toplamAltin);
       document.getElementById('toplamGumus').textContent = sayiYazdir(toplamGumus);
+
+      const kzEl = document.getElementById('guncelKarZarar');
       kzEl.textContent = paraYazdir(toplamKarZarar);
       kzEl.className = plClass(toplamKarZarar);
     }
@@ -687,9 +797,48 @@
       kurBilgisiEkranaYaz();
     }
 
+    function loadTradingViewCharts() {
+      if (window.TradingView) {
+        new window.TradingView.widget({
+          autosize: true,
+          symbol: "OANDA:XAUUSD",
+          interval: "D",
+          timezone: "Europe/Istanbul",
+          theme: "light",
+          style: "1",
+          locale: "tr",
+          toolbar_bg: "#f1f3f6",
+          enable_publishing: false,
+          hide_top_toolbar: true,
+          hide_legend: true,
+          save_image: false,
+          container_id: "tv_gold"
+        });
+
+        new window.TradingView.widget({
+          autosize: true,
+          symbol: "OANDA:XAGUSD",
+          interval: "D",
+          timezone: "Europe/Istanbul",
+          theme: "light",
+          style: "1",
+          locale: "tr",
+          toolbar_bg: "#f1f3f6",
+          enable_publishing: false,
+          hide_top_toolbar: true,
+          hide_legend: true,
+          save_image: false,
+          container_id: "tv_silver"
+        });
+      }
+    }
+
     bugunYaz();
     ekraniYenile();
     yatirimBirimGuncelle();
+    kurGetir(false);
   </script>
+
+  <script src="https://s3.tradingview.com/tv.js" onload="loadTradingViewCharts()"></script>
 </body>
 </html>
