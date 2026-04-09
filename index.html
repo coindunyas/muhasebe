@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cari Takip ve Yatırım</title>
+  <title>Cari Takip, Kasa/Banka ve Yatırım</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; color: #222; }
-    .container { max-width: 1280px; margin: 30px auto; padding: 20px; }
+    .container { max-width: 1380px; margin: 30px auto; padding: 20px; }
     h1, h2, h3 { margin-top: 0; }
     .card {
       background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 20px;
@@ -29,9 +29,7 @@
     .btn-success { background: #059669; color: white; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td {
-      padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px;
-    }
+    th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
     th { background: #f9fafb; }
     .right { text-align: right; }
 
@@ -47,16 +45,8 @@
       padding: 18px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }
-    .summary .box h3 {
-      margin: 0 0 8px;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    .summary .box p {
-      margin: 0;
-      font-size: 24px;
-      font-weight: bold;
-    }
+    .summary .box h3 { margin: 0 0 8px; font-size: 14px; color: #6b7280; }
+    .summary .box p { margin: 0; font-size: 24px; font-weight: bold; }
 
     .muted { color: #6b7280; font-size: 13px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -67,9 +57,7 @@
     }
 
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab-btn {
-      width: auto; padding: 12px 18px; background: #e5e7eb; color: #111827;
-    }
+    .tab-btn { width: auto; padding: 12px 18px; background: #e5e7eb; color: #111827; }
     .tab-btn.active { background: #111827; color: #fff; }
 
     .page { display: none; }
@@ -79,10 +67,10 @@
       display: inline-block; padding: 4px 8px; border-radius: 999px;
       font-size: 12px; font-weight: bold; background: #eef2ff; color: #3730a3;
     }
+    .tag-kasa { background: #ecfdf5; color: #047857; }
+    .tag-banka { background: #eff6ff; color: #1d4ed8; }
 
-    .info-bar {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: #4b5563;
-    }
+    .info-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: #4b5563; }
     .info-pill { background: #f3f4f6; padding: 8px 12px; border-radius: 999px; }
 
     .pl-positive { color: #059669; font-weight: 700; }
@@ -99,9 +87,7 @@
       background: #fff; border-radius: 14px; overflow: hidden;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
-    .chart-title {
-      padding: 14px 16px; border-bottom: 1px solid #e5e7eb; font-weight: bold; background: #fafafa;
-    }
+    .chart-title { padding: 14px 16px; border-bottom: 1px solid #e5e7eb; font-weight: bold; background: #fafafa; }
 
     @media (max-width: 700px) {
       table, thead, tbody, th, td, tr { display: block; }
@@ -118,11 +104,12 @@
 </head>
 <body>
   <div class="container">
-    <h1>Cari Takip ve Yatırım</h1>
+    <h1>Cari Takip, Kasa/Banka ve Yatırım</h1>
     <p class="muted">Veritabanı yok. Tüm veriler tarayıcıda <strong>localStorage</strong> içinde saklanır. GitHub Pages için uygundur.</p>
 
     <div class="tabs">
       <button class="tab-btn active" onclick="sayfaGoster('cariPage', this)">Cari Takip</button>
+      <button class="tab-btn" onclick="sayfaGoster('hesapPage', this)">Kasa / Banka</button>
       <button class="tab-btn" onclick="sayfaGoster('yatirimPage', this)">Yatırım</button>
     </div>
 
@@ -148,10 +135,12 @@
           </select>
           <input type="number" id="tutar" placeholder="Tutar" min="0" step="0.01" />
           <input type="date" id="tarih" />
+          <select id="hareketHesapId"></select>
         </div>
         <div style="margin-top:12px;">
           <input type="text" id="aciklama" placeholder="Açıklama" />
         </div>
+        <p class="muted" style="margin-top:10px;">Tahsilat ve ödeme işlemlerinde seçilen kasa / banka bakiyesi otomatik etkilenir.</p>
         <div class="actions" style="margin-top:12px;">
           <button class="btn-primary" id="kaydetBtn" onclick="hareketKaydet()">Kaydet</button>
           <button class="btn-light" id="iptalBtn" onclick="duzenlemeIptal()" style="display:none;">İptal</button>
@@ -167,6 +156,36 @@
       <div class="card">
         <h2>Hareket Listesi</h2>
         <div id="hareketListesi"></div>
+      </div>
+    </div>
+
+    <div id="hesapPage" class="page">
+      <div class="summary">
+        <div class="box"><h3>Toplam Kasa</h3><p id="toplamKasa">0 ₺</p></div>
+        <div class="box"><h3>Toplam Banka</h3><p id="toplamBanka">0 ₺</p></div>
+        <div class="box"><h3>Genel Nakit Durumu</h3><p id="genelHesapToplami">0 ₺</p></div>
+      </div>
+
+      <div class="card">
+        <h2 id="hesapFormBaslik">Hesap Ekle</h2>
+        <input type="hidden" id="hesapEditId" />
+        <div class="grid">
+          <input type="text" id="hesapAdi" placeholder="Hesap Adı" />
+          <select id="hesapTipi">
+            <option value="KASA">Kasa</option>
+            <option value="BANKA">Banka</option>
+          </select>
+          <input type="number" id="hesapAcilisBakiyesi" placeholder="Açılış Bakiyesi" min="0" step="0.01" />
+        </div>
+        <div class="actions" style="margin-top:12px;">
+          <button class="btn-primary" id="hesapKaydetBtn" onclick="hesapKaydet()">Kaydet</button>
+          <button class="btn-light" id="hesapIptalBtn" onclick="hesapDuzenlemeIptal()" style="display:none;">İptal</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Hesap Listesi</h2>
+        <div id="hesapListesi"></div>
       </div>
     </div>
 
@@ -189,7 +208,6 @@
         <div class="actions" style="margin-top:12px;">
           <button class="btn-secondary" onclick="manuelMetalFiyatlariniKaydet()">Fiyatları Kaydet</button>
         </div>
-        <p class="muted" style="margin-top:12px;">Altın ve gümüşte en güvenli yöntem buraya güncel gram fiyatını yazmaktır. Sonra yatırım eklerken ALTIN veya GÜMÜŞ seçince kur alanına otomatik gelir.</p>
       </div>
 
       <div class="card">
@@ -223,7 +241,6 @@
           <div class="info-pill">GÜMÜŞ/gr: <strong id="gumusKurBilgi">manuel</strong></div>
           <div class="info-pill">Son Güncelleme: <strong id="kurGuncellemeBilgi">-</strong></div>
         </div>
-        <p class="muted" style="margin-top:12px;">USD/EUR otomatik gelir. ALTIN/GÜMÜŞ seçince kur alanı manuel gram fiyatı için hazırlanır.</p>
       </div>
 
       <div class="card">
@@ -234,15 +251,11 @@
       <div class="chart-grid">
         <div class="chart-box">
           <div class="chart-title">Altın Grafiği (XAU/USD)</div>
-          <div class="tradingview-widget-container">
-            <div id="tv_gold"></div>
-          </div>
+          <div class="tradingview-widget-container"><div id="tv_gold"></div></div>
         </div>
         <div class="chart-box">
           <div class="chart-title">Gümüş Grafiği (XAG/USD)</div>
-          <div class="tradingview-widget-container">
-            <div id="tv_silver"></div>
-          </div>
+          <div class="tradingview-widget-container"><div id="tv_silver"></div></div>
         </div>
       </div>
     </div>
@@ -252,16 +265,14 @@
     const CARI_STORAGE_KEY = 'basitCariTakipData';
     const YATIRIM_STORAGE_KEY = 'basitYatirimTakipData';
     const KUR_STORAGE_KEY = 'basitYatirimKurData';
+    const HESAP_STORAGE_KEY = 'basitKasaBankaData';
 
     function paraYazdir(tutar) {
       return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(tutar || 0);
     }
 
     function sayiYazdir(sayi, basamak = 4) {
-      return Number(sayi || 0).toLocaleString('tr-TR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: basamak
-      });
+      return Number(sayi || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: basamak });
     }
 
     function plClass(tutar) {
@@ -283,28 +294,128 @@
       document.getElementById('yatirimTarihi').value = bugun;
     }
 
-    function cariVerileriGetir() {
-      return JSON.parse(localStorage.getItem(CARI_STORAGE_KEY) || '[]');
+    function cariVerileriGetir() { return JSON.parse(localStorage.getItem(CARI_STORAGE_KEY) || '[]'); }
+    function cariVerileriKaydet(data) { localStorage.setItem(CARI_STORAGE_KEY, JSON.stringify(data)); }
+    function yatirimVerileriGetir() { return JSON.parse(localStorage.getItem(YATIRIM_STORAGE_KEY) || '[]'); }
+    function yatirimVerileriKaydet(data) { localStorage.setItem(YATIRIM_STORAGE_KEY, JSON.stringify(data)); }
+    function kurBilgisiGetir() { return JSON.parse(localStorage.getItem(KUR_STORAGE_KEY) || '{}'); }
+    function kurBilgisiKaydet(data) { localStorage.setItem(KUR_STORAGE_KEY, JSON.stringify(data)); }
+    function hesapVerileriGetir() { return JSON.parse(localStorage.getItem(HESAP_STORAGE_KEY) || '[]'); }
+    function hesapVerileriKaydet(data) { localStorage.setItem(HESAP_STORAGE_KEY, JSON.stringify(data)); }
+
+    function hesapBakiyesiHesapla(hesap) {
+      const acilis = Number(hesap.acilisBakiye || 0);
+      const hareketler = cariVerileriGetir().filter(x => String(x.hesapId || '') === String(hesap.id));
+      let tahsilat = 0;
+      let odeme = 0;
+      hareketler.forEach(h => {
+        if (h.islemTipi === 'tahsilat') tahsilat += Number(h.tutar || 0);
+        if (h.islemTipi === 'odeme') odeme += Number(h.tutar || 0);
+      });
+      return acilis + tahsilat - odeme;
     }
 
-    function cariVerileriKaydet(data) {
-      localStorage.setItem(CARI_STORAGE_KEY, JSON.stringify(data));
+    function hesapSecenekleriniYaz() {
+      const select = document.getElementById('hareketHesapId');
+      const hesaplar = hesapVerileriGetir();
+      let html = '<option value="">Hesap Seç (opsiyonel)</option>';
+      hesaplar.forEach(h => {
+        html += `<option value="${h.id}">${h.hesapAdi} (${h.hesapTipi})</option>`;
+      });
+      select.innerHTML = html;
     }
 
-    function yatirimVerileriGetir() {
-      return JSON.parse(localStorage.getItem(YATIRIM_STORAGE_KEY) || '[]');
+    function hesapKaydet() {
+      const editId = document.getElementById('hesapEditId').value;
+      const hesapAdi = document.getElementById('hesapAdi').value.trim();
+      const hesapTipi = document.getElementById('hesapTipi').value;
+      const acilisBakiye = parseFloat(document.getElementById('hesapAcilisBakiyesi').value || '0');
+
+      if (!hesapAdi) return alert('Hesap adı girin.');
+
+      const data = hesapVerileriGetir();
+      if (editId) {
+        const index = data.findIndex(x => String(x.id) === String(editId));
+        if (index !== -1) data[index] = { ...data[index], hesapAdi, hesapTipi, acilisBakiye };
+      } else {
+        data.unshift({ id: Date.now(), hesapAdi, hesapTipi, acilisBakiye });
+      }
+      hesapVerileriKaydet(data);
+      hesapFormTemizle();
+      ekraniYenile();
     }
 
-    function yatirimVerileriKaydet(data) {
-      localStorage.setItem(YATIRIM_STORAGE_KEY, JSON.stringify(data));
+    function hesapDuzenle(id) {
+      const item = hesapVerileriGetir().find(x => x.id === id);
+      if (!item) return;
+      document.getElementById('hesapEditId').value = item.id;
+      document.getElementById('hesapAdi').value = item.hesapAdi;
+      document.getElementById('hesapTipi').value = item.hesapTipi;
+      document.getElementById('hesapAcilisBakiyesi').value = item.acilisBakiye;
+      document.getElementById('hesapFormBaslik').textContent = 'Hesap Düzenle';
+      document.getElementById('hesapKaydetBtn').textContent = 'Güncelle';
+      document.getElementById('hesapIptalBtn').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function kurBilgisiGetir() {
-      return JSON.parse(localStorage.getItem(KUR_STORAGE_KEY) || '{}');
+    function hesapSil(id) {
+      const bagli = cariVerileriGetir().some(x => String(x.hesapId || '') === String(id));
+      if (bagli) {
+        alert('Bu hesaba bağlı tahsilat/ödeme kayıtları var. Önce onları silin veya düzenleyin.');
+        return;
+      }
+      const data = hesapVerileriGetir().filter(x => x.id !== id);
+      hesapVerileriKaydet(data);
+      ekraniYenile();
     }
 
-    function kurBilgisiKaydet(data) {
-      localStorage.setItem(KUR_STORAGE_KEY, JSON.stringify(data));
+    function hesapDuzenlemeIptal() { hesapFormTemizle(); }
+
+    function hesapFormTemizle() {
+      document.getElementById('hesapEditId').value = '';
+      document.getElementById('hesapAdi').value = '';
+      document.getElementById('hesapTipi').value = 'KASA';
+      document.getElementById('hesapAcilisBakiyesi').value = '';
+      document.getElementById('hesapFormBaslik').textContent = 'Hesap Ekle';
+      document.getElementById('hesapKaydetBtn').textContent = 'Kaydet';
+      document.getElementById('hesapIptalBtn').style.display = 'none';
+    }
+
+    function hesapListesiniYaz() {
+      const alan = document.getElementById('hesapListesi');
+      const data = hesapVerileriGetir();
+      if (!data.length) {
+        alan.innerHTML = '<div class="empty">Henüz kasa / banka hesabı yok.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>Hesap Adı</th><th>Tür</th><th class="right">Açılış</th><th class="right">Güncel Bakiye</th><th>İşlem</th></tr></thead><tbody>';
+      data.forEach(item => {
+        const bakiye = hesapBakiyesiHesapla(item);
+        const tipClass = item.hesapTipi === 'KASA' ? 'tag-kasa' : 'tag-banka';
+        html += `<tr>
+          <td data-label="Hesap Adı">${item.hesapAdi}</td>
+          <td data-label="Tür"><span class="tag ${tipClass}">${item.hesapTipi}</span></td>
+          <td data-label="Açılış" class="right">${paraYazdir(item.acilisBakiye)}</td>
+          <td data-label="Güncel Bakiye" class="right">${paraYazdir(bakiye)}</td>
+          <td data-label="İşlem">
+            <div class="actions">
+              <button class="btn-secondary" onclick="hesapDuzenle(${item.id})">Düzenle</button>
+              <button class="btn-danger" onclick="hesapSil(${item.id})">Sil</button>
+            </div>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      alan.innerHTML = html;
+    }
+
+    function hesapOzetYaz() {
+      const data = hesapVerileriGetir();
+      const toplamKasa = data.filter(x => x.hesapTipi === 'KASA').reduce((sum, x) => sum + hesapBakiyesiHesapla(x), 0);
+      const toplamBanka = data.filter(x => x.hesapTipi === 'BANKA').reduce((sum, x) => sum + hesapBakiyesiHesapla(x), 0);
+      document.getElementById('toplamKasa').textContent = paraYazdir(toplamKasa);
+      document.getElementById('toplamBanka').textContent = paraYazdir(toplamBanka);
+      document.getElementById('genelHesapToplami').textContent = paraYazdir(toplamKasa + toplamBanka);
     }
 
     function hareketKaydet() {
@@ -313,21 +424,23 @@
       const islemTipi = document.getElementById('islemTipi').value;
       const tutar = parseFloat(document.getElementById('tutar').value);
       const tarih = document.getElementById('tarih').value;
+      const hesapId = document.getElementById('hareketHesapId').value;
       const aciklama = document.getElementById('aciklama').value.trim();
 
       if (!cariAdi) return alert('Cari adı girin.');
       if (!tutar || tutar <= 0) return alert('Geçerli bir tutar girin.');
       if (!tarih) return alert('Tarih seçin.');
-
-      const data = cariVerileriGetir();
-
-      if (editId) {
-        const index = data.findIndex(item => String(item.id) === String(editId));
-        if (index !== -1) data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, aciklama };
-      } else {
-        data.unshift({ id: Date.now(), cariAdi, islemTipi, tutar, tarih, aciklama });
+      if ((islemTipi === 'tahsilat' || islemTipi === 'odeme') && !hesapId) {
+        return alert('Tahsilat / ödeme için kasa veya banka hesabı seçin.');
       }
 
+      const data = cariVerileriGetir();
+      if (editId) {
+        const index = data.findIndex(item => String(item.id) === String(editId));
+        if (index !== -1) data[index] = { ...data[index], cariAdi, islemTipi, tutar, tarih, hesapId, aciklama };
+      } else {
+        data.unshift({ id: Date.now(), cariAdi, islemTipi, tutar, tarih, hesapId, aciklama });
+      }
       cariVerileriKaydet(data);
       formTemizle();
       ekraniYenile();
@@ -341,6 +454,7 @@
       document.getElementById('islemTipi').value = item.islemTipi;
       document.getElementById('tutar').value = item.tutar;
       document.getElementById('tarih').value = item.tarih;
+      document.getElementById('hareketHesapId').value = item.hesapId || '';
       document.getElementById('aciklama').value = item.aciklama || '';
       document.getElementById('hareketFormBaslik').textContent = 'Kayıt Düzenle';
       document.getElementById('kaydetBtn').textContent = 'Güncelle';
@@ -348,16 +462,12 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function duzenlemeIptal() {
-      formTemizle();
-    }
-
+    function duzenlemeIptal() { formTemizle(); }
     function hareketSil(id) {
       const data = cariVerileriGetir().filter(item => item.id !== id);
       cariVerileriKaydet(data);
       ekraniYenile();
     }
-
     function tumCariVerileriniSil() {
       if (!confirm('Tüm cari kayıtları silinsin mi?')) return;
       localStorage.removeItem(CARI_STORAGE_KEY);
@@ -370,18 +480,22 @@
       document.getElementById('cariAdi').value = '';
       document.getElementById('tutar').value = '';
       document.getElementById('aciklama').value = '';
+      document.getElementById('hareketHesapId').value = '';
       document.getElementById('hareketFormBaslik').textContent = 'Yeni Hareket Ekle';
       document.getElementById('kaydetBtn').textContent = 'Kaydet';
       document.getElementById('iptalBtn').style.display = 'none';
       bugunYaz();
     }
 
+    function hesapAdiniBul(id) {
+      const item = hesapVerileriGetir().find(x => String(x.id) === String(id));
+      return item ? item.hesapAdi : '-';
+    }
+
     function cariOzetHesapla(data) {
       const map = {};
       data.forEach(item => {
-        if (!map[item.cariAdi]) {
-          map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
-        }
+        if (!map[item.cariAdi]) map[item.cariAdi] = { cariAdi: item.cariAdi, satis: 0, tahsilat: 0, alis: 0, odeme: 0, bakiye: 0 };
         if (item.islemTipi === 'satis') map[item.cariAdi].satis += item.tutar;
         if (item.islemTipi === 'tahsilat') map[item.cariAdi].tahsilat += item.tutar;
         if (item.islemTipi === 'alis') map[item.cariAdi].alis += item.tutar;
@@ -421,7 +535,7 @@
         alan.innerHTML = '<div class="empty">Henüz hareket yok.</div>';
         return;
       }
-      let html = '<table><thead><tr><th>Tarih</th><th>Cari Adı</th><th>İşlem</th><th class="right">Tutar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Tarih</th><th>Cari Adı</th><th>İşlem</th><th class="right">Tutar</th><th>Hesap</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>';
       data.forEach(item => {
         const tipEtiket = item.islemTipi === 'satis' ? 'Satış' : item.islemTipi === 'tahsilat' ? 'Tahsilat' : item.islemTipi === 'alis' ? 'Alış' : 'Ödeme';
         html += `<tr>
@@ -429,6 +543,7 @@
           <td data-label="Cari Adı">${item.cariAdi}</td>
           <td data-label="İşlem"><span class="tag">${tipEtiket}</span></td>
           <td data-label="Tutar" class="right">${paraYazdir(item.tutar)}</td>
+          <td data-label="Hesap">${hesapAdiniBul(item.hesapId)}</td>
           <td data-label="Açıklama">${item.aciklama || '-'}</td>
           <td data-label="İşlem">
             <div class="actions">
@@ -464,23 +579,16 @@
       return kayitKur || 0;
     }
 
-    function guncelDegerHesapla(item) {
-      return (item.miktar || 0) * guncelBirimFiyatGetir(item.tip, item.kur);
-    }
-
-    function karZararHesapla(item) {
-      return guncelDegerHesapla(item) - (item.toplamTl || 0);
-    }
+    function guncelDegerHesapla(item) { return (item.miktar || 0) * guncelBirimFiyatGetir(item.tip, item.kur); }
+    function karZararHesapla(item) { return guncelDegerHesapla(item) - (item.toplamTl || 0); }
 
     function manuelMetalFiyatlariniKaydet() {
       const altin = parseFloat(document.getElementById('manuelAltinFiyati').value);
       const gumus = parseFloat(document.getElementById('manuelGumusFiyati').value);
-
       const kur = kurBilgisiGetir();
       if (altin && altin > 0) kur.altinGramTry = altin;
       if (gumus && gumus > 0) kur.gumusGramTry = gumus;
       kur.guncelleme = new Date().toLocaleString('tr-TR');
-
       kurBilgisiKaydet(kur);
       kurBilgisiEkranaYaz();
       yatirimBirimGuncelle();
@@ -492,41 +600,18 @@
       const tip = document.getElementById('yatirimTipi').value;
       const kurInput = document.getElementById('kur');
       const kur = kurBilgisiGetir();
-
-      if (tip === 'ALTIN' && kur.altinGramTry) {
-        kurInput.value = Number(kur.altinGramTry).toFixed(2);
-        return;
-      }
-      if (tip === 'GUMUS' && kur.gumusGramTry) {
-        kurInput.value = Number(kur.gumusGramTry).toFixed(2);
-        return;
-      }
-      if (tip === 'USD' && kur.usdTry) {
-        kurInput.value = Number(kur.usdTry).toFixed(4);
-        return;
-      }
-      if (tip === 'EUR' && kur.eurTry) {
-        kurInput.value = Number(kur.eurTry).toFixed(4);
-        return;
-      }
+      if (tip === 'ALTIN' && kur.altinGramTry) { kurInput.value = Number(kur.altinGramTry).toFixed(2); return; }
+      if (tip === 'GUMUS' && kur.gumusGramTry) { kurInput.value = Number(kur.gumusGramTry).toFixed(2); return; }
+      if (tip === 'USD' && kur.usdTry) { kurInput.value = Number(kur.usdTry).toFixed(4); return; }
+      if (tip === 'EUR' && kur.eurTry) { kurInput.value = Number(kur.eurTry).toFixed(4); return; }
       alert('Önce ilgili fiyatı gir veya güncelle');
     }
 
     function yatirimBirimGuncelle() {
       const tip = document.getElementById('yatirimTipi').value;
       const kurInput = document.getElementById('kur');
-
-      if (tip === 'ALTIN') {
-        kurInput.placeholder = 'Altın Gram Fiyatı';
-        kurInput.value = '';
-        return;
-      }
-      if (tip === 'GUMUS') {
-        kurInput.placeholder = 'Gümüş Gram Fiyatı';
-        kurInput.value = '';
-        return;
-      }
-
+      if (tip === 'ALTIN') { kurInput.placeholder = 'Altın Gram Fiyatı'; kurInput.value = ''; return; }
+      if (tip === 'GUMUS') { kurInput.placeholder = 'Gümüş Gram Fiyatı'; kurInput.value = ''; return; }
       kurInput.placeholder = 'Kur';
       const kur = kurBilgisiGetir();
       if (tip === 'USD' && kur.usdTry) kurInput.value = Number(kur.usdTry).toFixed(4);
@@ -538,19 +623,15 @@
         const fxResponse = await fetch('https://open.er-api.com/v6/latest/USD');
         if (!fxResponse.ok) throw new Error('Doviz API hata');
         const fxData = await fxResponse.json();
-
         const usdTry = fxData?.rates?.TRY || null;
         const usdEur = fxData?.rates?.EUR || null;
         const eurTry = usdTry && usdEur ? (usdTry / usdEur) : null;
         const guncelleme = new Date().toLocaleString('tr-TR');
-
         if (!usdTry || !eurTry) throw new Error('Doviz verisi eksik');
-
         kurBilgisiKaydet({ ...kurBilgisiGetir(), usdTry, eurTry, guncelleme });
         kurBilgisiEkranaYaz();
         yatirimBirimGuncelle();
         ekraniYenile();
-
         if (showAlert) alert('Döviz kurları güncellendi');
       } catch (error) {
         console.error(error);
@@ -565,7 +646,6 @@
       document.getElementById('altinKurBilgi').textContent = kur.altinGramTry ? paraYazdir(kur.altinGramTry) : 'manuel';
       document.getElementById('gumusKurBilgi').textContent = kur.gumusGramTry ? paraYazdir(kur.gumusGramTry) : 'manuel';
       document.getElementById('kurGuncellemeBilgi').textContent = kur.guncelleme || '-';
-
       if (kur.altinGramTry) document.getElementById('manuelAltinFiyati').value = kur.altinGramTry;
       if (kur.gumusGramTry) document.getElementById('manuelGumusFiyati').value = kur.gumusGramTry;
     }
@@ -577,21 +657,17 @@
       const kur = parseFloat(document.getElementById('kur').value);
       const tarih = document.getElementById('yatirimTarihi').value;
       const aciklama = document.getElementById('yatirimAciklama').value.trim();
-
       if (!miktar || miktar <= 0) return alert('Geçerli miktar girin.');
       if (!kur || kur <= 0) return alert('Geçerli kur/fiyat girin.');
       if (!tarih) return alert('Tarih seçin.');
-
       const toplamTl = miktar * kur;
       const data = yatirimVerileriGetir();
-
       if (editId) {
         const index = data.findIndex(item => String(item.id) === String(editId));
         if (index !== -1) data[index] = { ...data[index], tip, miktar, kur, toplamTl, tarih, aciklama };
       } else {
         data.unshift({ id: Date.now(), tip, miktar, kur, toplamTl, tarih, aciklama });
       }
-
       yatirimVerileriKaydet(data);
       yatirimFormTemizle();
       ekraniYenile();
@@ -612,16 +688,12 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function yatirimDuzenlemeIptal() {
-      yatirimFormTemizle();
-    }
-
+    function yatirimDuzenlemeIptal() { yatirimFormTemizle(); }
     function yatirimSil(id) {
       const data = yatirimVerileriGetir().filter(item => item.id !== id);
       yatirimVerileriKaydet(data);
       ekraniYenile();
     }
-
     function tumYatirimVerileriniSil() {
       if (!confirm('Tüm yatırım kayıtları silinsin mi?')) return;
       localStorage.removeItem(YATIRIM_STORAGE_KEY);
@@ -679,13 +751,11 @@
       const toplamAltin = data.filter(x => x.tip === 'ALTIN').reduce((sum, x) => sum + x.miktar, 0);
       const toplamGumus = data.filter(x => x.tip === 'GUMUS').reduce((sum, x) => sum + x.miktar, 0);
       const toplamKarZarar = data.reduce((sum, x) => sum + karZararHesapla(x), 0);
-
       document.getElementById('toplamYatirimTl').textContent = paraYazdir(toplamTl);
       document.getElementById('toplamUsd').textContent = sayiYazdir(toplamUsd);
       document.getElementById('toplamEur').textContent = sayiYazdir(toplamEur);
       document.getElementById('toplamAltin').textContent = sayiYazdir(toplamAltin);
       document.getElementById('toplamGumus').textContent = sayiYazdir(toplamGumus);
-
       const kzEl = document.getElementById('guncelKarZarar');
       kzEl.textContent = paraYazdir(toplamKarZarar);
       kzEl.className = plClass(toplamKarZarar);
@@ -697,6 +767,10 @@
       ozetAlaniniYaz(cariData);
       hareketListesiniYaz(cariData);
 
+      hesapSecenekleriniYaz();
+      hesapListesiniYaz();
+      hesapOzetYaz();
+
       const yatirimData = yatirimVerileriGetir();
       yatirimOzetYaz(yatirimData);
       yatirimListesiniYaz(yatirimData);
@@ -705,41 +779,12 @@
 
     function loadTradingViewCharts() {
       if (!window.TradingView) return;
-
-      new window.TradingView.widget({
-        autosize: true,
-        symbol: "OANDA:XAUUSD",
-        interval: "D",
-        timezone: "Europe/Istanbul",
-        theme: "light",
-        style: "1",
-        locale: "tr",
-        toolbar_bg: "#f1f3f6",
-        enable_publishing: false,
-        hide_top_toolbar: true,
-        hide_legend: true,
-        save_image: false,
-        container_id: "tv_gold"
-      });
-
-      new window.TradingView.widget({
-        autosize: true,
-        symbol: "OANDA:XAGUSD",
-        interval: "D",
-        timezone: "Europe/Istanbul",
-        theme: "light",
-        style: "1",
-        locale: "tr",
-        toolbar_bg: "#f1f3f6",
-        enable_publishing: false,
-        hide_top_toolbar: true,
-        hide_legend: true,
-        save_image: false,
-        container_id: "tv_silver"
-      });
+      new window.TradingView.widget({ autosize: true, symbol: 'OANDA:XAUUSD', interval: 'D', timezone: 'Europe/Istanbul', theme: 'light', style: '1', locale: 'tr', toolbar_bg: '#f1f3f6', enable_publishing: false, hide_top_toolbar: true, hide_legend: true, save_image: false, container_id: 'tv_gold' });
+      new window.TradingView.widget({ autosize: true, symbol: 'OANDA:XAGUSD', interval: 'D', timezone: 'Europe/Istanbul', theme: 'light', style: '1', locale: 'tr', toolbar_bg: '#f1f3f6', enable_publishing: false, hide_top_toolbar: true, hide_legend: true, save_image: false, container_id: 'tv_silver' });
     }
 
     bugunYaz();
+    hesapSecenekleriniYaz();
     ekraniYenile();
     yatirimBirimGuncelle();
     kurGetir(false);
